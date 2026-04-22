@@ -48,6 +48,34 @@ harness-scaffold 전체 구조를 clone합니다:
 - docs/ (decisions/, journals/)
 - 200줄 제한 + 자기완결 작성 기준
 
+## 프로젝트 간 연결
+
+두 프로젝트가 서로를 인식하려면 **양쪽 프로젝트의 REGISTRY.md**를 수정합니다.
+
+### 예시: my-api와 my-frontend를 연결
+
+**my-api의 REGISTRY.md → External Projects 테이블:**
+```
+| my-frontend | ../my-frontend | provides-to | API를 소비하는 프론트엔드 |
+```
+
+**my-frontend의 REGISTRY.md → External Projects 테이블:**
+```
+| my-api | ../my-api | depends-on | 인증/결제 API 서버 |
+```
+
+Relationship 종류:
+- `depends-on` — 이 프로젝트가 상대를 필요로 함
+- `provides-to` — 이 프로젝트가 상대에게 제공함
+- `shares-with` — 공통 리소스를 공유함
+- `related` — 느슨한 연관
+
+이렇게 하면 AI가 작업 시 연결된 프로젝트를 인식하고, 변경의 영향 범위를 파악합니다.
+
+### ralph에서 관계 추적
+
+PROJECTS.md에서도 Related 컬럼으로 프로젝트 간 관계를 한눈에 볼 수 있습니다.
+
 ## 버전 관리
 
 모든 변경사항은 GitHub push로 관리합니다.

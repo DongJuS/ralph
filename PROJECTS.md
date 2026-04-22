@@ -2,8 +2,8 @@
 
 All projects managed by this Ralph instance.
 
-| Name | Path | Template | Created | Status | Description |
-|------|------|----------|---------|--------|-------------|
+| Name | Path | Template | Created | Status | Related | Description |
+|------|------|----------|---------|--------|---------|-------------|
 
 ## How to Add a Project
 

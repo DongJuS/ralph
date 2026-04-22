@@ -116,7 +116,7 @@ TEMPLATE_NAME="harness-scaffold"
 [ "$TYPE" = "general" ] && TEMPLATE_NAME="general"
 
 sed -i '' "/_(none yet)_/d" "$PROJECTS_MD"
-LINE="| $NAME | projects/$NAME | $TEMPLATE_NAME | $DATE | active | $DESC |"
+LINE="| $NAME | projects/$NAME | $TEMPLATE_NAME | $DATE | active | — | $DESC |"
 
 if ! grep -q "| $NAME |" "$PROJECTS_MD"; then
   awk -v line="$LINE" '/^\|---/ { print; print line; next } { print }' "$PROJECTS_MD" > "$PROJECTS_MD.tmp"
