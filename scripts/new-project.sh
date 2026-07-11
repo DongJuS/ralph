@@ -7,13 +7,16 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-PROJECTS_DIR="$ROOT_DIR/projects"
+WORKSPACE_DIR="$(cd "$ROOT_DIR/.." && pwd)"
 PROJECTS_MD="$ROOT_DIR/PROJECTS.md"
-TEMPLATE_REPO="https://github.com/DongJuS/harness-scaffold.git"
+REMOTE_TEMPLATE_REPO="https://github.com/DongJuS/harness-scaffold.git"
+LOCAL_TEMPLATE_REPO="$WORKSPACE_DIR/harness-scaffold"
+MARKER_FILE=".git/ralph-managed"
 
 NAME="$1"
 TYPE="$2"
 DESC="$3"
+DATE=$(date +%Y-%m-%d)
 
 if [ -z "$NAME" ] || [ -z "$TYPE" ] || [ -z "$DESC" ]; then
   echo "Usage: $0 <name> <type> \"<description>\""
@@ -26,7 +29,7 @@ if [[ "$TYPE" != "dev" && "$TYPE" != "general" ]]; then
   exit 1
 fi
 
-TARGET="$PROJECTS_DIR/$NAME"
+TARGET="$WORKSPACE_DIR/$NAME"
 
 if [ -d "$TARGET" ]; then
   echo "Error: project '$NAME' already exists at $TARGET"
@@ -35,14 +38,45 @@ fi
 
 echo "Creating project: $NAME ($TYPE)"
 
-if [ "$TYPE" = "dev" ]; then
-  echo "Cloning harness-scaffold template..."
-  git clone "$TEMPLATE_REPO" "$TARGET"
-  rm -rf "$TARGET/.git"
+init_project_repo() {
+  local commit_message="$1"
   cd "$TARGET"
   git init
+  cat > "$MARKER_FILE" << EOF
+manager=ralph
+registry=PROJECTS.md
+created=$DATE
+path=../$NAME
+EOF
   git add -A
-  git commit -m "init: scaffold from harness-scaffold template"
+  git commit -m "$commit_message"
+}
+
+apply_dev_project_overrides() {
+  local project_claude_template="$TARGET/templates/PROJECT-CLAUDE.md"
+  if [ -f "$project_claude_template" ]; then
+    cp "$project_claude_template" "$TARGET/CLAUDE.md"
+  fi
+}
+
+sync_local_template_worktree() {
+  if [ "$TEMPLATE_SOURCE" = "$LOCAL_TEMPLATE_REPO" ]; then
+    rsync -a --exclude '.git' "$LOCAL_TEMPLATE_REPO"/ "$TARGET"/
+  fi
+}
+
+if [ "$TYPE" = "dev" ]; then
+  TEMPLATE_SOURCE="$REMOTE_TEMPLATE_REPO"
+  if [ -d "$LOCAL_TEMPLATE_REPO/.git" ]; then
+    TEMPLATE_SOURCE="$LOCAL_TEMPLATE_REPO"
+  fi
+
+  echo "Cloning harness-scaffold template..."
+  git clone "$TEMPLATE_SOURCE" "$TARGET"
+  rm -rf "$TARGET/.git"
+  sync_local_template_worktree
+  apply_dev_project_overrides
+  init_project_repo "init: scaffold from harness-scaffold template"
   echo "Dev project created with harness-scaffold structure."
 
 elif [ "$TYPE" = "general" ]; then
@@ -102,21 +136,17 @@ proposed | accepted | deprecated
 [What this enables and what it costs]
 EOF
 
-  cd "$TARGET"
-  git init
-  git add -A
-  git commit -m "init: scaffold from general template"
+  init_project_repo "init: scaffold from general template"
   echo "General project created with minimal structure."
 fi
 
 cd "$ROOT_DIR"
 
-DATE=$(date +%Y-%m-%d)
 TEMPLATE_NAME="harness-scaffold"
 [ "$TYPE" = "general" ] && TEMPLATE_NAME="general"
 
 sed -i '' "/_(none yet)_/d" "$PROJECTS_MD"
-LINE="| $NAME | projects/$NAME | $TEMPLATE_NAME | $DATE | active | — | $DESC |"
+LINE="| $NAME | ../$NAME | $TEMPLATE_NAME | $DATE | active | — | $DESC |"
 
 if ! grep -q "| $NAME |" "$PROJECTS_MD"; then
   awk -v line="$LINE" '/^\|---/ { print; print line; next } { print }' "$PROJECTS_MD" > "$PROJECTS_MD.tmp"
@@ -125,4 +155,5 @@ fi
 
 echo ""
 echo "Done! Project registered in PROJECTS.md"
-echo "  cd projects/$NAME"
+echo "  cd ../$NAME"
+echo "  This project is an independent git repository. Configure its own origin before pushing."

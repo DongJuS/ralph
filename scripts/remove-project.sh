@@ -6,8 +6,8 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-PROJECTS_DIR="$ROOT_DIR/projects"
 PROJECTS_MD="$ROOT_DIR/PROJECTS.md"
+MARKER_FILE=".git/ralph-managed"
 
 NAME="$1"
 DELETE_FLAG="$2"
@@ -23,17 +23,40 @@ if ! grep -q "| $NAME |" "$PROJECTS_MD"; then
   exit 1
 fi
 
+PROJECT_PATH=$(
+  awk -F'|' -v name="$NAME" '
+    $2 ~ /^[[:space:]]*[^[:space:]].*$/ {
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2)
+      if ($2 == name) {
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "", $3)
+        print $3
+        exit
+      }
+    }
+  ' "$PROJECTS_MD"
+)
+
+if [ -z "$PROJECT_PATH" ]; then
+  echo "Error: project path for '$NAME' could not be resolved"
+  exit 1
+fi
+
 sed -i '' "/| $NAME |/d" "$PROJECTS_MD"
 echo "Removed '$NAME' from PROJECTS.md"
 
 if [ "$DELETE_FLAG" = "--delete" ]; then
-  if [ -d "$PROJECTS_DIR/$NAME" ]; then
-    echo "Deleting directory: projects/$NAME"
-    rm -rf "$PROJECTS_DIR/$NAME"
+  TARGET="$ROOT_DIR/$PROJECT_PATH"
+  if [ -d "$TARGET" ]; then
+    if [ ! -f "$TARGET/$MARKER_FILE" ]; then
+      echo "Refusing to delete $PROJECT_PATH because it is not marked as Ralph-managed."
+      exit 1
+    fi
+    echo "Deleting directory: $PROJECT_PATH"
+    rm -rf "$TARGET"
     echo "Directory deleted."
   else
-    echo "Directory projects/$NAME does not exist, skipping."
+    echo "Directory $PROJECT_PATH does not exist, skipping."
   fi
 else
-  echo "Directory projects/$NAME was NOT deleted. Use --delete to remove it."
+  echo "Directory $PROJECT_PATH was NOT deleted. Use --delete to remove it."
 fi

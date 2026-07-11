@@ -1,13 +1,22 @@
 # Ralph
 
-Project factory — 무한히 새 프로젝트를 생성하고 관리하는 레포.
+Project factory — 동일한 워크스페이스 루트에서 sibling 레포들을 생성하고 관리하는 레포.
 
 ## 구조
 
-- **ralph** (이 레포) — 프로젝트 생성/관리 도구
+- **[ralph](https://github.com/DongJuS/ralph)** (이 레포) — 프로젝트 생성/관리 도구
 - **[harness-scaffold](https://github.com/DongJuS/harness-scaffold)** — 개발 프로젝트 템플릿 (별도 레포)
 
 Ralph는 harness-scaffold를 clone해서 새 개발 프로젝트를 만들거나, 최소 템플릿으로 비개발 프로젝트를 만듭니다.
+생성된 프로젝트는 `ralph/` 하위가 아니라 `ralph`와 같은 워크스페이스 루트에 sibling 레포로 배치됩니다.
+
+```text
+workspace-root/
+├── ralph/
+├── harness-scaffold/
+├── my-saas-app/
+└── q3-marketing/
+```
 
 ## Quick Start
 
@@ -17,6 +26,9 @@ Ralph는 harness-scaffold를 clone해서 새 개발 프로젝트를 만들거나
 
 # 비개발 프로젝트 생성 (최소 템플릿)
 ./scripts/new-project.sh q3-marketing general "Q3 마케팅 계획"
+
+# 기존 sibling 레포 편입
+./scripts/import-project.sh existing-api harness-scaffold "기존 API 레포 편입"
 
 # 프로젝트 목록 확인
 ./scripts/list-projects.sh
@@ -48,6 +60,16 @@ harness-scaffold 전체 구조를 clone합니다:
 - docs/ (decisions/, journals/)
 - 200줄 제한 + 자기완결 작성 기준
 
+## 관리 범위
+
+Ralph는 워크스페이스 루트의 모든 sibling 레포를 자동 관리하지 않습니다.
+다음 중 하나에 해당하는 레포만 Ralph 관리 대상으로 간주합니다:
+
+- `new-project.sh`로 생성된 레포
+- `import-project.sh`로 명시적으로 편입한 레포
+
+즉, 같은 디렉토리 레벨에 있어도 `PROJECTS.md`에 등록되지 않은 레포는 외부 레포로 취급합니다.
+
 ## 프로젝트 간 연결
 
 두 프로젝트가 서로를 인식하려면 **양쪽 프로젝트의 REGISTRY.md**를 수정합니다.
@@ -78,10 +100,18 @@ PROJECTS.md에서도 Related 컬럼으로 프로젝트 간 관계를 한눈에 �
 
 ## 버전 관리
 
-모든 변경사항은 GitHub push로 관리합니다.
+`ralph`, `harness-scaffold`, 그리고 각 생성/편입 프로젝트는 모두 **독립 git 레포**입니다.
+디렉토리 레벨은 같아도 remote와 commit history는 공유하지 않습니다.
 
 ```bash
+# ralph 자체를 push
+cd ralph
 git add -A && git commit -m "feat: description" && git push
+
+# 개별 프로젝트를 push
+cd ../my-saas-app
+git remote add origin <project-remote-url>
+git add -A && git commit -m "feat: description" && git push -u origin main
 ```
 
 ## Prerequisites
